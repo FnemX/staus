@@ -1,7 +1,7 @@
 const express = require('express');
 const si = require('systeminformation');
 const app = express();
-const PORT = 3001; // 使用统一的端口变量
+const port = 3000;
 
 // 设置静态文件目录
 app.use(express.static('public'));
@@ -75,6 +75,7 @@ app.get('/api/system', async (req, res) => {
 });
 
 // 启动服务器
+const PORT = 3001; // 从3000修改为3001
 app.listen(PORT, () => {
   console.log(`服务器运行在 http://localhost:${PORT}`);
 });

@@ -1,120 +1,140 @@
 # Linux系统状态监控网站
 
 ## 项目概述
-
-这是一个基于Node.js开发的Linux系统状态实时监控网站，windows也可以使用，只不过功能不完善，能够展示CPU、内存、磁盘和网络等系统资源的使用情况。系统采用前后端分离架构，后端通过systeminformation库获取系统数据，前端使用纯HTML/CSS/JavaScript实现数据可视化展示，并支持12小时历史数据持久化存储。项目主要适用于TGW服务器的系统状态监控。
+这是一个基于Node.js开发的Linux系统状态实时监控网站，能够展示CPU、内存、磁盘和网络等系统资源的使用情况。系统采用前后端分离架构，后端通过systeminformation库获取系统数据，前端使用纯HTML/CSS/JavaScript实现数据可视化展示。项目主要适用于服务器的系统状态监控。
 
 ## 功能特性
 
 - **实时监控**：系统状态数据每5秒自动更新
 - **完整数据展示**：监控CPU、内存、磁盘和网络状态
-- **历史数据持久化**：使用localStorage存储12小时历史数据，刷新页面不丢失
-- **数据可视化**：使用自定义图表直观展示资源使用趋势
+- **轻量级实现**：纯HTML/CSS/JavaScript前端，无需外部依赖
 - **响应式设计**：适配不同屏幕尺寸的设备
-- **零外部依赖**：前端使用纯原生技术实现，无第三方库
+- **简单易用**：直观的界面展示，易于理解系统状态
 
 ## 技术栈
 
-- **后端**：Node.js + Express
-- **系统数据采集**：systeminformation
-- **前端**：HTML5 + CSS3 + JavaScript (纯原生)
-- **数据存储**：浏览器localStorage
+### 后端
+- **Node.js**：运行环境
+- **Express**：Web框架
+- **systeminformation**：系统信息获取库
 
-## 文件结构
+### 前端
+- **HTML5**：页面结构
+- **CSS3**：样式设计
+- **JavaScript**：交互逻辑和图表绘制
 
+## 安装与部署
+
+### 环境要求
+- Node.js 14.x 或更高版本
+- npm 或 yarn 包管理器
+
+### 安装步骤
+
+1. **克隆仓库**
+   ```bash
+   git clone https://github.com/FnemX/staus.git
+   cd staus
+   ```
+
+2. **安装依赖**
+   ```bash
+   npm install
+   ```
+
+3. **启动服务器**
+   ```bash
+   npm start
+   ```
+
+4. **访问网站**
+   打开浏览器，访问 `http://localhost:3001`
+
+## 在Linux系统上部署
+
+### 1. 安装Node.js
+
+**Debian/Ubuntu系统**:
+```bash
+curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+sudo apt-get install -y nodejs
 ```
-linux-status-monitor/
-├── package.json          # 项目配置和依赖管理
-├── server.js             # Express服务器和API实现
-└── public/               # 静态文件目录
-    └── index.html        # 前端页面和JavaScript逻辑
+
+**CentOS/RHEL系统**:
+```bash
+curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash -
+sudo yum install -y nodejs
+```
+
+### 2. 复制项目文件
+使用SCP命令将项目文件复制到Linux服务器:
+```bash
+scp -r staus/* user@your-server-ip:/path/to/destination/
+```
+
+### 3. 安装依赖
+```bash
+cd /path/to/destination/
+npm install
+```
+
+### 4. 启动服务
+直接启动:
+```bash
+npm start
+```
+
+后台运行:
+```bash
+nohup npm start > app.log 2>&1 &
 ```
 
 ## 主要文件说明
 
-### server.js
+- `server.js`: 后端服务器代码，提供API接口
+- `public/index.html`: 前端页面，展示系统监控数据
+- `package.json`: 项目配置和依赖管理
 
-Express服务器实现，提供以下功能：
-- 静态文件服务：托管前端页面
-- RESTful API：提供系统信息数据接口
-- 数据采集：使用systeminformation库获取实时系统状态
+## API接口说明
 
-### public/index.html
+- `GET /api/cpu`: 获取CPU使用情况
+- `GET /api/memory`: 获取内存使用情况
+- `GET /api/disk`: 获取磁盘使用情况
+- `GET /api/network`: 获取网络使用情况
+- `GET /api/system`: 获取系统基本信息
 
-前端页面实现，包含：
-- 响应式UI设计，展示系统状态卡片和详细信息
-- 自定义图表绘制，可视化资源使用趋势
-- 数据持久化存储逻辑，保存12小时历史数据
-- 定时数据刷新，实时更新系统状态
+## 自定义配置
 
-## 安装部署
-
-### 1. 准备工作
-
-确保您的Linux系统已安装：
-- Node.js (v14或更高版本)
-- npm (Node.js包管理器)
-
-### 2. 部署步骤
-
-```bash
-# 1. 克隆或上传项目文件到Linux服务器
-# 假设文件放在 /opt/linux-status-monitor 目录
-
-# 2. 进入项目目录
-cd /opt/linux-status-monitor
-
-# 3. 安装依赖包
-npm install
-
-# 4. 启动服务
-npm start
-
-# 或使用PM2在后台运行（推荐生产环境）
-npm install -g pm2
-pm start
-pm2 save
+### 修改服务器端口
+编辑 `server.js` 文件，修改 `PORT` 常量:
+```javascript
+const PORT = 3001; // 修改为您需要的端口
 ```
 
-## 配置说明
+## 系统权限说明
 
-- **端口配置**：服务默认运行在3001端口，可在server.js中修改PORT变量
-- **数据更新频率**：默认5秒更新一次，可在前端JavaScript中修改setInterval参数
-- **历史数据保留**：默认保留12小时数据，存储在浏览器localStorage中
+在Linux系统上，某些系统信息可能需要较高权限才能访问。建议以普通用户身份运行，系统会自动获取可访问的信息。
 
-## 使用方法
+## 防火墙设置
 
-1. 启动服务后，在浏览器中访问：`http://服务器IP:3001`
-2. 页面将自动加载并显示系统监控数据
-3. 图表区域显示最近12小时的历史数据趋势
-4. 刷新页面后，历史数据将自动恢复显示
+如果服务器启用了防火墙，需要开放相应端口:
+```bash
+# 对于ufw防火墙
+sudo ufw allow 3001/tcp
 
-## 系统要求
+# 对于firewalld防火墙
+sudo firewall-cmd --permanent --add-port=3001/tcp
+sudo firewall-cmd --reload
+```
 
-- **服务器端**：
-  - 需要足够的权限读取系统信息（普通用户通常即可）
-  - 推荐配置：1核CPU，512MB内存，任意Linux发行版
+## License
 
-- **客户端**：
-  - 浏览器需要启用JavaScript和localStorage
-  - 推荐使用Chrome、Firefox或Edge等现代浏览器
-  - 最低分辨率要求：1024x768
+[GPL-3.0](LICENSE)
 
-## 数据持久化实现
+## 作者
 
-系统使用浏览器localStorage实现历史数据持久化：
-- 每个数据点包含值和时间戳信息
-- 自动清理超过12小时的数据
-- 限制最大数据点数量为4320个（12小时，5秒一个点）
-- 图表显示优化，仅渲染最近100个数据点以确保性能
+FnemX
 
-## 注意事项
+## 项目地址
 
-1. localStorage存储有大小限制（通常为5-10MB），长时间运行可能导致数据覆盖
-2. 清除浏览器缓存或使用隐私模式可能导致历史数据丢失
-3. 多用户访问时，每个用户的历史数据独立存储在各自浏览器中
-4. 如需跨设备共享历史数据，建议扩展为服务端数据库存储
-
-## 许可证
-
-开源项目，可自由使用和修改。
+[https://github.com/FnemX/staus](https://github.com/FnemX/staus)

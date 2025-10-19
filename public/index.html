@@ -277,31 +277,13 @@
 
     /* 图表区域 */
     .chart-container {
-      height: 240px;
+      height: 200px;
       background-color: var(--gray-100);
       border-radius: 6px;
       margin-top: 24px;
       padding: 16px;
       position: relative;
       overflow: hidden;
-    }
-    
-    /* 图表时间信息 */
-    .chart-time-info {
-      font-size: 12px;
-      color: var(--gray-500);
-      margin-top: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .chart-last-update {
-      font-weight: 500;
-    }
-    
-    .chart-data-range {
-      font-style: italic;
     }
 
     .chart-title {
@@ -530,10 +512,6 @@
           <div class="chart-container">
             <div class="chart-title">CPU负载图表</div>
             <div id="cpu-chart" class="simple-chart"></div>
-            <div class="chart-time-info">
-              <span class="chart-last-update" id="cpu-chart-time">-- : -- : --</span>
-              <span class="chart-data-range">最近12小时</span>
-            </div>
           </div>
         </div>
 
@@ -569,10 +547,6 @@
           <div class="chart-container">
             <div class="chart-title">内存使用图表</div>
             <div id="memory-chart" class="simple-chart"></div>
-            <div class="chart-time-info">
-              <span class="chart-last-update" id="memory-chart-time">-- : -- : --</span>
-              <span class="chart-data-range">最近12小时</span>
-            </div>
           </div>
         </div>
       </div>
@@ -630,10 +604,6 @@
           <div class="chart-container">
             <div class="chart-title">网络流量图表</div>
             <div id="network-chart" class="simple-chart"></div>
-            <div class="chart-time-info">
-              <span class="chart-last-update" id="network-chart-time">-- : -- : --</span>
-              <span class="chart-data-range">最近12小时</span>
-            </div>
           </div>
         </div>
       </div>
@@ -650,7 +620,6 @@
           </div>
           <p class="footer-description">实时监控TGW服务器系统状态</p>
         </div>
-        <div class="footer-description">版权归clumm所有，qq：785971038</div>
         <div class="footer-update-rate">
           <p>数据刷新间隔: <span id="refresh-rate">5</span>秒</p>
         </div>
@@ -669,72 +638,12 @@
       return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
     }
 
-    // 数据存储常量
-    const STORAGE_KEYS = {
-      CPU_HISTORY: 'linux_monitor_cpu_history',
-      MEMORY_HISTORY: 'linux_monitor_memory_history',
-      NETWORK_RX_HISTORY: 'linux_monitor_network_rx_history',
-      NETWORK_TX_HISTORY: 'linux_monitor_network_tx_history'
-    };
-    
-    const MAX_HISTORY_AGE = 12 * 60 * 60 * 1000; // 12小时（毫秒）
-    const MAX_DATA_POINTS = 4320; // 12小时，5秒一个点：12*60*60/5 = 4320
-    
-    // 从localStorage加载历史数据并清理过期数据
-    function loadHistoryData(storageKey) {
-      try {
-        const stored = localStorage.getItem(storageKey);
-        if (!stored) return [];
-        
-        const history = JSON.parse(stored);
-        const now = Date.now();
-        
-        // 过滤掉12小时前的数据点
-        return history.filter(point => now - point.timestamp < MAX_HISTORY_AGE);
-      } catch (error) {
-        console.error('加载历史数据失败:', error);
-        return [];
-      }
-    }
-    
-    // 保存历史数据到localStorage
-    function saveHistoryData(storageKey, data) {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(data));
-      } catch (error) {
-        console.error('保存历史数据失败:', error);
-      }
-    }
-    
-    // 初始化历史数据（带时间戳）
-    let cpuHistory = loadHistoryData(STORAGE_KEYS.CPU_HISTORY);
-    let memoryHistory = loadHistoryData(STORAGE_KEYS.MEMORY_HISTORY);
-    let networkRxHistory = loadHistoryData(STORAGE_KEYS.NETWORK_RX_HISTORY);
-    let networkTxHistory = loadHistoryData(STORAGE_KEYS.NETWORK_TX_HISTORY);
-    
-    // 如果没有历史数据，初始化为空数组
-    if (cpuHistory.length === 0) cpuHistory = [];
-    if (memoryHistory.length === 0) memoryHistory = [];
-    if (networkRxHistory.length === 0) networkRxHistory = [];
-    if (networkTxHistory.length === 0) networkTxHistory = [];
-    
-    // 格式化时间为 HH:MM:SS 格式
-    function formatTime(timestamp) {
-      const date = new Date(timestamp);
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
-      return `${hours}:${minutes}:${seconds}`;
-    }
-    
-    // 更新图表时间显示
-    function updateChartTime(chartId, timestamp) {
-      const timeElement = document.getElementById(`${chartId}-time`);
-      if (timeElement) {
-        timeElement.textContent = formatTime(timestamp);
-      }
-    }
-    
+    // 历史数据数组
+    let cpuHistory = Array(30).fill(0);
+    let memoryHistory = Array(30).fill(0);
+    let networkRxHistory = Array(30).fill(0);
+    let networkTxHistory = Array(30).fill(0);
+
     // 创建简单的柱状图表
     function createSimpleChart(containerId, data, color = '#3b82f6') {
       const container = document.getElementById(containerId);
@@ -743,17 +652,11 @@
       // 清空容器
       container.innerHTML = '';
       
-      // 从历史数据中提取值
-      const values = data.map(point => point.value || 0);
-      
       // 找到最大值以便缩放
-      const maxValue = Math.max(...values, 100);
-      
-      // 限制显示的数据点数量，避免图表过于密集
-      const displayData = values.length > 100 ? values.slice(-100) : values;
+      const maxValue = Math.max(...data, 100);
       
       // 创建每个柱形
-      displayData.forEach(value => {
+      data.forEach(value => {
         const bar = document.createElement('div');
         bar.className = 'chart-bar';
         bar.style.backgroundColor = color;
@@ -762,40 +665,19 @@
         bar.style.height = `${height}%`;
         container.appendChild(bar);
       });
-      
-      // 更新图表时间显示
-      updateChartTime(containerId, Date.now());
     }
-    
+
     // 更新图表
     function updateCharts(cpuUsage, memoryUsage, networkRx, networkTx) {
-      const timestamp = Date.now();
-      
       // 更新历史数据
-      cpuHistory.push({ value: cpuUsage, timestamp });
-      memoryHistory.push({ value: memoryUsage, timestamp });
-      networkRxHistory.push({ value: networkRx, timestamp });
-      networkTxHistory.push({ value: networkTx, timestamp });
-      
-      // 限制数据点数量，防止localStorage溢出
-      if (cpuHistory.length > MAX_DATA_POINTS) {
-        cpuHistory = cpuHistory.slice(-MAX_DATA_POINTS);
-      }
-      if (memoryHistory.length > MAX_DATA_POINTS) {
-        memoryHistory = memoryHistory.slice(-MAX_DATA_POINTS);
-      }
-      if (networkRxHistory.length > MAX_DATA_POINTS) {
-        networkRxHistory = networkRxHistory.slice(-MAX_DATA_POINTS);
-      }
-      if (networkTxHistory.length > MAX_DATA_POINTS) {
-        networkTxHistory = networkTxHistory.slice(-MAX_DATA_POINTS);
-      }
-      
-      // 保存数据到localStorage
-      saveHistoryData(STORAGE_KEYS.CPU_HISTORY, cpuHistory);
-      saveHistoryData(STORAGE_KEYS.MEMORY_HISTORY, memoryHistory);
-      saveHistoryData(STORAGE_KEYS.NETWORK_RX_HISTORY, networkRxHistory);
-      saveHistoryData(STORAGE_KEYS.NETWORK_TX_HISTORY, networkTxHistory);
+      cpuHistory.shift();
+      cpuHistory.push(cpuUsage);
+      memoryHistory.shift();
+      memoryHistory.push(memoryUsage);
+      networkRxHistory.shift();
+      networkRxHistory.push(networkRx);
+      networkTxHistory.shift();
+      networkTxHistory.push(networkTx);
       
       // 创建CPU图表
       createSimpleChart('cpu-chart', cpuHistory, '#3b82f6');
@@ -804,54 +686,8 @@
       createSimpleChart('memory-chart', memoryHistory, '#10b981');
       
       // 创建网络图表（将接收和发送叠加显示）
-      const combinedNetwork = networkRxHistory.map((rx, i) => (rx?.value || 0) + (networkTxHistory[i]?.value || 0));
-      const combinedNetworkWithTime = combinedNetwork.map((value, i) => ({
-        value,
-        timestamp: networkRxHistory[i]?.timestamp || Date.now()
-      }));
-      createSimpleChart('network-chart', combinedNetworkWithTime, '#6366f1');
-    }
-    
-    // 初始化显示已存储的图表数据
-    function initializeCharts() {
-      // 显示已保存的历史数据或初始化空图表
-      createSimpleChart('cpu-chart', cpuHistory.length > 0 ? cpuHistory : Array(30).fill({ value: 0, timestamp: Date.now() }), '#3b82f6');
-      createSimpleChart('memory-chart', memoryHistory.length > 0 ? memoryHistory : Array(30).fill({ value: 0, timestamp: Date.now() }), '#10b981');
-      
-      // 创建网络图表（将接收和发送叠加显示）
-      if (networkRxHistory.length > 0 && networkTxHistory.length > 0) {
-        const combinedNetwork = networkRxHistory.map((rx, i) => (rx?.value || 0) + (networkTxHistory[i]?.value || 0));
-        const combinedNetworkWithTime = combinedNetwork.map((value, i) => ({
-          value,
-          timestamp: networkRxHistory[i]?.timestamp || Date.now()
-        }));
-        createSimpleChart('network-chart', combinedNetworkWithTime, '#6366f1');
-      } else {
-        createSimpleChart('network-chart', Array(30).fill({ value: 0, timestamp: Date.now() }), '#6366f1');
-      }
-    }
-
-    // 初始化显示已存储的图表数据
-    function initializeCharts() {
-      if (cpuHistory.length === 0) {
-        // 如果没有历史数据，创建空数据用于初始化显示
-        const emptyData = Array(30).fill(0).map(() => ({ value: 0, timestamp: Date.now() }));
-        createSimpleChart('cpu-chart', emptyData, '#3b82f6');
-        createSimpleChart('memory-chart', emptyData, '#10b981');
-        createSimpleChart('network-chart', emptyData, '#6366f1');
-      } else {
-        // 显示已保存的历史数据
-        createSimpleChart('cpu-chart', cpuHistory, '#3b82f6');
-        createSimpleChart('memory-chart', memoryHistory, '#10b981');
-        
-        // 创建网络图表（将接收和发送叠加显示）
-        const combinedNetwork = networkRxHistory.map((rx, i) => (rx?.value || 0) + (networkTxHistory[i]?.value || 0));
-        const combinedNetworkWithTime = combinedNetwork.map((value, i) => ({
-          value,
-          timestamp: networkRxHistory[i]?.timestamp || Date.now()
-        }));
-        createSimpleChart('network-chart', combinedNetworkWithTime, '#6366f1');
-      }
+      const combinedNetwork = networkRxHistory.map((rx, i) => rx + networkTxHistory[i]);
+      createSimpleChart('network-chart', combinedNetwork, '#6366f1');
     }
 
     // 获取并更新CPU信息
@@ -1058,9 +894,6 @@
 
     // 初始化
     window.onload = async () => {
-      // 先初始化图表，显示已保存的历史数据
-      initializeCharts();
-      
       // 更新系统信息
       await updateAllInfo();
       
