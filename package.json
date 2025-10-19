@@ -1,0 +1,13 @@
+{
+  "name": "linux-status-monitor",
+  "version": "1.0.0",
+  "description": "基于1914S,Linux系统状态监控网站",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "systeminformation": "^5.21.17"
+  }
+}

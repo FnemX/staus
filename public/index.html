@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linux系统状态监控</title>
+  <style>
+    /* 基础样式 */
+    :root {
+      --primary: #3b82f6;
+      --secondary: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --dark: #1f2937;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-800: #1f2937;
+      --white: #ffffff;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: var(--gray-100);
+      min-height: 100vh;
+      color: var(--gray-800);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    /* 顶部导航栏 */
+    header {
+      background-color: var(--primary);
+      color: white;
+      padding: 12px 0;
+      box-shadow: var(--shadow-md);
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-icon {
+      font-size: 24px;
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      text-align: center;
+    }
+
+    .logo-text {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .system-info {
+      font-size: 14px;
+      display: none;
+    }
+
+    /* 状态卡片 */
+    .dashboard {
+      padding: 24px 0;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    @media (min-width: 640px) {
+      .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .cards-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .system-info {
+        display: block;
+      }
+    }
+
+    .status-card {
+      background-color: var(--white);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .status-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .card-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-label {
+      font-size: 14px;
+      color: var(--gray-500);
+    }
+
+    .card-value {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .card-progress {
+      width: 100%;
+      height: 10px;
+      background-color: var(--gray-200);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .card-progress-bar {
+      height: 100%;
+      transition: width 0.3s ease;
+      border-radius: 5px;
+    }
+
+    /* 详细信息卡片 */
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    @media (min-width: 1024px) {
+      .details-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .info-card {
+      background-color: var(--white);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .info-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .info-card-title {
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-card-title-icon {
+      display: inline-block;
+      width: 20px;
+      text-align: center;
+    }
+
+    .refresh-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background-color: rgba(59, 130, 246, 0.1);
+    }
+
+    /* 表格样式 */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    .info-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .info-table .label {
+      color: var(--gray-500);
+    }
+
+    .info-table .value {
+      font-weight: 500;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow-x: auto;
+      display: block;
+    }
+
+    .data-table thead {
+      background-color: var(--gray-100);
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-200);
+      white-space: nowrap;
+    }
+
+    .data-table th {
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: var(--gray-500);
+      letter-spacing: 0.05em;
+    }
+
+    .data-table tbody tr:hover {
+      background-color: var(--gray-100);
+    }
+
+    /* 图表区域 */
+    .chart-container {
+      height: 240px;
+      background-color: var(--gray-100);
+      border-radius: 6px;
+      margin-top: 24px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* 图表时间信息 */
+    .chart-time-info {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .chart-last-update {
+      font-weight: 500;
+    }
+    
+    .chart-data-range {
+      font-style: italic;
+    }
+
+    .chart-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-600);
+      margin-bottom: 16px;
+    }
+
+    /* 简单的图表实现 */
+    .simple-chart {
+      height: 140px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 8px;
+    }
+
+    .chart-bar {
+      width: 4px;
+      background-color: var(--primary);
+      border-radius: 2px;
+      transition: height 0.3s ease;
+    }
+
+    /* 进度条样式 */
+    .progress-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-bar {
+      width: 96px;
+      height: 8px;
+      background-color: var(--gray-200);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+
+    .progress-text {
+      font-size: 14px;
+    }
+
+    /* 页脚 */
+    footer {
+      background-color: var(--dark);
+      color: white;
+      padding: 24px 0;
+      margin-top: 48px;
+    }
+
+    .footer-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    @media (min-width: 640px) {
+      .footer-content {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
+
+    .footer-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    @media (min-width: 640px) {
+      .footer-info {
+        align-items: flex-start;
+      }
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .footer-description {
+      color: var(--gray-400);
+      font-size: 14px;
+    }
+
+    .footer-update-rate {
+      font-size: 14px;
+      color: var(--gray-400);
+    }
+
+    /* 图标替代 */
+    .icon {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <div class="logo">
+          <span class="logo-icon">⚙️</span>
+          <span class="logo-text">Linux系统状态监控</span>
+        </div>
+        <div class="system-info" id="system-info-header">
+          <span id="os-name"></span> | 
+          <span id="uptime"></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <div class="container">
+      <!-- 状态概览卡片 -->
+      <div class="cards-grid">
+        <!-- CPU使用率卡片 -->
+        <div class="status-card">
+          <div class="card-header">
+            <div class="card-info">
+              <span class="card-label">CPU使用率</span>
+              <span class="card-value" id="cpu-usage">--</span>
+            </div>
+            <div class="card-icon" style="background-color: rgba(59, 130, 246, 0.1); color: var(--primary)">
+              <span class="icon">⊞</span>
+            </div>
+          </div>
+          <div class="card-progress">
+            <div id="cpu-usage-bar" class="card-progress-bar" style="background-color: var(--primary); width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- 内存使用率卡片 -->
+        <div class="status-card">
+          <div class="card-header">
+            <div class="card-info">
+              <span class="card-label">内存使用率</span>
+              <span class="card-value" id="memory-usage">--</span>
+            </div>
+            <div class="card-icon" style="background-color: rgba(16, 185, 129, 0.1); color: var(--secondary)">
+              <span class="icon">□</span>
+            </div>
+          </div>
+          <div class="card-progress">
+            <div id="memory-usage-bar" class="card-progress-bar" style="background-color: var(--secondary); width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- 磁盘使用率卡片 -->
+        <div class="status-card">
+          <div class="card-header">
+            <div class="card-info">
+              <span class="card-label">磁盘使用率</span>
+              <span class="card-value" id="disk-usage">--</span>
+            </div>
+            <div class="card-icon" style="background-color: rgba(245, 158, 11, 0.1); color: var(--warning)">
+              <span class="icon">▣</span>
+            </div>
+          </div>
+          <div class="card-progress">
+            <div id="disk-usage-bar" class="card-progress-bar" style="background-color: var(--warning); width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- CPU温度卡片 -->
+        <div class="status-card">
+          <div class="card-header">
+            <div class="card-info">
+              <span class="card-label">CPU温度</span>
+              <span class="card-value" id="cpu-temperature">--</span>
+            </div>
+            <div class="card-icon" style="background-color: rgba(239, 68, 68, 0.1); color: var(--danger)">
+              <span class="icon">☀️</span>
+            </div>
+          </div>
+          <div class="card-progress">
+            <div id="cpu-temperature-bar" class="card-progress-bar" style="background-color: var(--danger); width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 详细信息部分 -->
+      <div class="details-grid">
+        <!-- CPU详细信息 -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <h2 class="info-card-title">
+              <span class="info-card-title-icon" style="color: var(--primary)"><span class="icon">⊞</span></span>
+              CPU详细信息
+            </h2>
+            <button class="refresh-btn">刷新</button>
+          </div>
+          <table class="info-table">
+            <tbody>
+              <tr>
+                <td class="label">型号</td>
+                <td class="value" id="cpu-model"></td>
+              </tr>
+              <tr>
+                <td class="label">核心数</td>
+                <td class="value" id="cpu-cores"></td>
+              </tr>
+              <tr>
+                <td class="label">线程数</td>
+                <td class="value" id="cpu-threads"></td>
+              </tr>
+              <tr>
+                <td class="label">频率</td>
+                <td class="value" id="cpu-speed"></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="chart-container">
+            <div class="chart-title">CPU负载图表</div>
+            <div id="cpu-chart" class="simple-chart"></div>
+            <div class="chart-time-info">
+              <span class="chart-last-update" id="cpu-chart-time">-- : -- : --</span>
+              <span class="chart-data-range">最近12小时</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 内存详细信息 -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <h2 class="info-card-title">
+              <span class="info-card-title-icon" style="color: var(--secondary)"><span class="icon">□</span></span>
+              内存详细信息
+            </h2>
+            <button class="refresh-btn">刷新</button>
+          </div>
+          <table class="info-table">
+            <tbody>
+              <tr>
+                <td class="label">总内存</td>
+                <td class="value" id="memory-total"></td>
+              </tr>
+              <tr>
+                <td class="label">已用内存</td>
+                <td class="value" id="memory-used"></td>
+              </tr>
+              <tr>
+                <td class="label">空闲内存</td>
+                <td class="value" id="memory-free"></td>
+              </tr>
+              <tr>
+                <td class="label">交换内存</td>
+                <td class="value" id="memory-swap"></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="chart-container">
+            <div class="chart-title">内存使用图表</div>
+            <div id="memory-chart" class="simple-chart"></div>
+            <div class="chart-time-info">
+              <span class="chart-last-update" id="memory-chart-time">-- : -- : --</span>
+              <span class="chart-data-range">最近12小时</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 磁盘和网络信息 -->
+      <div class="details-grid">
+        <!-- 磁盘信息 -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <h2 class="info-card-title">
+              <span class="info-card-title-icon" style="color: var(--warning)"><span class="icon">▣</span></span>
+              磁盘信息
+            </h2>
+            <button class="refresh-btn">刷新</button>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>设备</th>
+                <th>挂载点</th>
+                <th>总大小</th>
+                <th>已用</th>
+                <th>可用</th>
+                <th>使用率</th>
+              </tr>
+            </thead>
+            <tbody id="disk-table-body">
+              <!-- 磁盘数据将通过JavaScript动态填充 -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 网络信息 -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <h2 class="info-card-title">
+              <span class="info-card-title-icon" style="color: var(--primary)"><span class="icon">≡</span></span>
+              网络信息
+            </h2>
+            <button class="refresh-btn">刷新</button>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>接口</th>
+                <th>IP地址</th>
+                <th>接收(MB)</th>
+                <th>发送(MB)</th>
+              </tr>
+            </thead>
+            <tbody id="network-table-body">
+              <!-- 网络数据将通过JavaScript动态填充 -->
+            </tbody>
+          </table>
+          <div class="chart-container">
+            <div class="chart-title">网络流量图表</div>
+            <div id="network-chart" class="simple-chart"></div>
+            <div class="chart-time-info">
+              <span class="chart-last-update" id="network-chart-time">-- : -- : --</span>
+              <span class="chart-data-range">最近12小时</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-info">
+          <div class="footer-logo">
+            <span>⚙️</span>
+            <span>Linux系统状态监控</span>
+          </div>
+          <p class="footer-description">实时监控TGW服务器系统状态</p>
+        </div>
+        <div class="footer-description">版权归clumm所有，qq：785971038</div>
+        <div class="footer-update-rate">
+          <p>数据刷新间隔: <span id="refresh-rate">5</span>秒</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // 格式化数字（如内存大小）
+    function formatBytes(bytes, decimals = 2) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
+    // 数据存储常量
+    const STORAGE_KEYS = {
+      CPU_HISTORY: 'linux_monitor_cpu_history',
+      MEMORY_HISTORY: 'linux_monitor_memory_history',
+      NETWORK_RX_HISTORY: 'linux_monitor_network_rx_history',
+      NETWORK_TX_HISTORY: 'linux_monitor_network_tx_history'
+    };
+    
+    const MAX_HISTORY_AGE = 12 * 60 * 60 * 1000; // 12小时（毫秒）
+    const MAX_DATA_POINTS = 4320; // 12小时，5秒一个点：12*60*60/5 = 4320
+    
+    // 从localStorage加载历史数据并清理过期数据
+    function loadHistoryData(storageKey) {
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (!stored) return [];
+        
+        const history = JSON.parse(stored);
+        const now = Date.now();
+        
+        // 过滤掉12小时前的数据点
+        return history.filter(point => now - point.timestamp < MAX_HISTORY_AGE);
+      } catch (error) {
+        console.error('加载历史数据失败:', error);
+        return [];
+      }
+    }
+    
+    // 保存历史数据到localStorage
+    function saveHistoryData(storageKey, data) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(data));
+      } catch (error) {
+        console.error('保存历史数据失败:', error);
+      }
+    }
+    
+    // 初始化历史数据（带时间戳）
+    let cpuHistory = loadHistoryData(STORAGE_KEYS.CPU_HISTORY);
+    let memoryHistory = loadHistoryData(STORAGE_KEYS.MEMORY_HISTORY);
+    let networkRxHistory = loadHistoryData(STORAGE_KEYS.NETWORK_RX_HISTORY);
+    let networkTxHistory = loadHistoryData(STORAGE_KEYS.NETWORK_TX_HISTORY);
+    
+    // 如果没有历史数据，初始化为空数组
+    if (cpuHistory.length === 0) cpuHistory = [];
+    if (memoryHistory.length === 0) memoryHistory = [];
+    if (networkRxHistory.length === 0) networkRxHistory = [];
+    if (networkTxHistory.length === 0) networkTxHistory = [];
+    
+    // 格式化时间为 HH:MM:SS 格式
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+    
+    // 更新图表时间显示
+    function updateChartTime(chartId, timestamp) {
+      const timeElement = document.getElementById(`${chartId}-time`);
+      if (timeElement) {
+        timeElement.textContent = formatTime(timestamp);
+      }
+    }
+    
+    // 创建简单的柱状图表
+    function createSimpleChart(containerId, data, color = '#3b82f6') {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      
+      // 清空容器
+      container.innerHTML = '';
+      
+      // 从历史数据中提取值
+      const values = data.map(point => point.value || 0);
+      
+      // 找到最大值以便缩放
+      const maxValue = Math.max(...values, 100);
+      
+      // 限制显示的数据点数量，避免图表过于密集
+      const displayData = values.length > 100 ? values.slice(-100) : values;
+      
+      // 创建每个柱形
+      displayData.forEach(value => {
+        const bar = document.createElement('div');
+        bar.className = 'chart-bar';
+        bar.style.backgroundColor = color;
+        // 设置高度，确保即使为0也有最小高度
+        const height = value > 0 ? (value / maxValue) * 100 : 1;
+        bar.style.height = `${height}%`;
+        container.appendChild(bar);
+      });
+      
+      // 更新图表时间显示
+      updateChartTime(containerId, Date.now());
+    }
+    
+    // 更新图表
+    function updateCharts(cpuUsage, memoryUsage, networkRx, networkTx) {
+      const timestamp = Date.now();
+      
+      // 更新历史数据
+      cpuHistory.push({ value: cpuUsage, timestamp });
+      memoryHistory.push({ value: memoryUsage, timestamp });
+      networkRxHistory.push({ value: networkRx, timestamp });
+      networkTxHistory.push({ value: networkTx, timestamp });
+      
+      // 限制数据点数量，防止localStorage溢出
+      if (cpuHistory.length > MAX_DATA_POINTS) {
+        cpuHistory = cpuHistory.slice(-MAX_DATA_POINTS);
+      }
+      if (memoryHistory.length > MAX_DATA_POINTS) {
+        memoryHistory = memoryHistory.slice(-MAX_DATA_POINTS);
+      }
+      if (networkRxHistory.length > MAX_DATA_POINTS) {
+        networkRxHistory = networkRxHistory.slice(-MAX_DATA_POINTS);
+      }
+      if (networkTxHistory.length > MAX_DATA_POINTS) {
+        networkTxHistory = networkTxHistory.slice(-MAX_DATA_POINTS);
+      }
+      
+      // 保存数据到localStorage
+      saveHistoryData(STORAGE_KEYS.CPU_HISTORY, cpuHistory);
+      saveHistoryData(STORAGE_KEYS.MEMORY_HISTORY, memoryHistory);
+      saveHistoryData(STORAGE_KEYS.NETWORK_RX_HISTORY, networkRxHistory);
+      saveHistoryData(STORAGE_KEYS.NETWORK_TX_HISTORY, networkTxHistory);
+      
+      // 创建CPU图表
+      createSimpleChart('cpu-chart', cpuHistory, '#3b82f6');
+      
+      // 创建内存图表
+      createSimpleChart('memory-chart', memoryHistory, '#10b981');
+      
+      // 创建网络图表（将接收和发送叠加显示）
+      const combinedNetwork = networkRxHistory.map((rx, i) => (rx?.value || 0) + (networkTxHistory[i]?.value || 0));
+      const combinedNetworkWithTime = combinedNetwork.map((value, i) => ({
+        value,
+        timestamp: networkRxHistory[i]?.timestamp || Date.now()
+      }));
+      createSimpleChart('network-chart', combinedNetworkWithTime, '#6366f1');
+    }
+    
+    // 初始化显示已存储的图表数据
+    function initializeCharts() {
+      // 显示已保存的历史数据或初始化空图表
+      createSimpleChart('cpu-chart', cpuHistory.length > 0 ? cpuHistory : Array(30).fill({ value: 0, timestamp: Date.now() }), '#3b82f6');
+      createSimpleChart('memory-chart', memoryHistory.length > 0 ? memoryHistory : Array(30).fill({ value: 0, timestamp: Date.now() }), '#10b981');
+      
+      // 创建网络图表（将接收和发送叠加显示）
+      if (networkRxHistory.length > 0 && networkTxHistory.length > 0) {
+        const combinedNetwork = networkRxHistory.map((rx, i) => (rx?.value || 0) + (networkTxHistory[i]?.value || 0));
+        const combinedNetworkWithTime = combinedNetwork.map((value, i) => ({
+          value,
+          timestamp: networkRxHistory[i]?.timestamp || Date.now()
+        }));
+        createSimpleChart('network-chart', combinedNetworkWithTime, '#6366f1');
+      } else {
+        createSimpleChart('network-chart', Array(30).fill({ value: 0, timestamp: Date.now() }), '#6366f1');
+      }
+    }
+
+    // 初始化显示已存储的图表数据
+    function initializeCharts() {
+      if (cpuHistory.length === 0) {
+        // 如果没有历史数据，创建空数据用于初始化显示
+        const emptyData = Array(30).fill(0).map(() => ({ value: 0, timestamp: Date.now() }));
+        createSimpleChart('cpu-chart', emptyData, '#3b82f6');
+        createSimpleChart('memory-chart', emptyData, '#10b981');
+        createSimpleChart('network-chart', emptyData, '#6366f1');
+      } else {
+        // 显示已保存的历史数据
+        createSimpleChart('cpu-chart', cpuHistory, '#3b82f6');
+        createSimpleChart('memory-chart', memoryHistory, '#10b981');
+        
+        // 创建网络图表（将接收和发送叠加显示）
+        const combinedNetwork = networkRxHistory.map((rx, i) => (rx?.value || 0) + (networkTxHistory[i]?.value || 0));
+        const combinedNetworkWithTime = combinedNetwork.map((value, i) => ({
+          value,
+          timestamp: networkRxHistory[i]?.timestamp || Date.now()
+        }));
+        createSimpleChart('network-chart', combinedNetworkWithTime, '#6366f1');
+      }
+    }
+
+    // 获取并更新CPU信息
+    async function updateCPUInfo() {
+      try {
+        const response = await fetch('/api/cpu');
+        const data = await response.json();
+        
+        // 更新CPU基本信息
+        document.getElementById('cpu-model').textContent = data.info?.brand || '未知';
+        document.getElementById('cpu-cores').textContent = data.info?.cores || '未知';
+        document.getElementById('cpu-threads').textContent = data.info?.physicalCores || '未知';
+        document.getElementById('cpu-speed').textContent = data.info?.speed ? `${data.info.speed} GHz` : '未知';
+        
+        // 更新CPU使用率
+        const cpuUsage = data.load?.currentLoad || 0;
+        document.getElementById('cpu-usage').textContent = `${cpuUsage.toFixed(1)}%`;
+        document.getElementById('cpu-usage-bar').style.width = `${cpuUsage}%`;
+        
+        // 更新CPU温度
+        const cpuTemp = data.temperature?.main || 0;
+        document.getElementById('cpu-temperature').textContent = cpuTemp ? `${cpuTemp}°C` : '未知';
+        const tempPercentage = Math.min((cpuTemp / 100) * 100, 100);
+        document.getElementById('cpu-temperature-bar').style.width = `${tempPercentage}%`;
+        
+        return cpuUsage;
+      } catch (error) {
+        console.error('更新CPU信息失败:', error);
+        return 0;
+      }
+    }
+
+    // 获取并更新内存信息
+    async function updateMemoryInfo() {
+      try {
+        const response = await fetch('/api/memory');
+        const data = await response.json();
+        
+        // 更新内存基本信息
+        document.getElementById('memory-total').textContent = data.total ? formatBytes(data.total) : '未知';
+        document.getElementById('memory-used').textContent = data.used ? formatBytes(data.used) : '未知';
+        document.getElementById('memory-free').textContent = data.free ? formatBytes(data.free) : '未知';
+        document.getElementById('memory-swap').textContent = data.swapTotal ? formatBytes(data.swapTotal) : '未知';
+        
+        // 更新内存使用率
+        const memoryUsage = data.total && data.used ? (data.used / data.total) * 100 : 0;
+        document.getElementById('memory-usage').textContent = `${memoryUsage.toFixed(1)}%`;
+        document.getElementById('memory-usage-bar').style.width = `${memoryUsage}%`;
+        
+        return memoryUsage;
+      } catch (error) {
+        console.error('更新内存信息失败:', error);
+        return 0;
+      }
+    }
+
+    // 获取并更新磁盘信息
+    async function updateDiskInfo() {
+      try {
+        const response = await fetch('/api/disk');
+        const data = await response.json();
+        const diskTableBody = document.getElementById('disk-table-body');
+        diskTableBody.innerHTML = '';
+        
+        // 计算总磁盘使用率
+        let totalSize = 0;
+        let totalUsed = 0;
+        
+        // 更新磁盘表
+        if (data.fsSize && Array.isArray(data.fsSize)) {
+          data.fsSize.forEach(disk => {
+            const total = disk.size || 0;
+            const available = disk.available || 0;
+            const used = total - available;
+            const usage = total > 0 ? (used / total) * 100 : 0;
+            
+            totalSize += total;
+            totalUsed += used;
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${disk.fs || '未知'}</td>
+              <td>${disk.mount || '未知'}</td>
+              <td>${formatBytes(total)}</td>
+              <td>${formatBytes(used)}</td>
+              <td>${formatBytes(available)}</td>
+              <td>
+                <div class="progress-container">
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${usage}%; background-color: ${usage > 80 ? '#ef4444' : usage > 60 ? '#f59e0b' : '#10b981'}"></div>
+                  </div>
+                  <span class="progress-text">${usage.toFixed(1)}%</span>
+                </div>
+              </td>
+            `;
+            diskTableBody.appendChild(row);
+          });
+        } else {
+          // 添加占位行表示数据加载失败
+          const row = document.createElement('tr');
+          row.innerHTML = '<td colspan="6" style="text-align: center; color: #6b7280;">无法加载磁盘信息</td>';
+          diskTableBody.appendChild(row);
+        }
+        
+        // 更新总磁盘使用率
+        const totalUsage = totalSize > 0 ? (totalUsed / totalSize) * 100 : 0;
+        document.getElementById('disk-usage').textContent = `${totalUsage.toFixed(1)}%`;
+        document.getElementById('disk-usage-bar').style.width = `${totalUsage}%`;
+      } catch (error) {
+        console.error('更新磁盘信息失败:', error);
+        const diskTableBody = document.getElementById('disk-table-body');
+        diskTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #6b7280;">无法加载磁盘信息</td></tr>';
+      }
+    }
+
+    // 获取并更新网络信息
+    async function updateNetworkInfo() {
+      try {
+        const response = await fetch('/api/network');
+        const data = await response.json();
+        const networkTableBody = document.getElementById('network-table-body');
+        networkTableBody.innerHTML = '';
+        
+        // 计算总网络流量
+        let totalRx = 0;
+        let totalTx = 0;
+        
+        // 更新网络表
+        if (data.stats && Array.isArray(data.stats)) {
+          data.stats.forEach(stat => {
+            // 过滤掉lo接口
+            if (stat.iface === 'lo') return;
+            
+            const rxMB = (stat.rx_bytes / 1024 / 1024).toFixed(2);
+            const txMB = (stat.tx_bytes / 1024 / 1024).toFixed(2);
+            
+            totalRx += parseFloat(rxMB);
+            totalTx += parseFloat(txMB);
+            
+            // 查找对应的接口信息获取IP
+            const interfaceInfo = data.interfaces?.find(intf => intf.iface === stat.iface);
+            const ipAddress = interfaceInfo?.ip4 || '无IP';
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${stat.iface}</td>
+              <td>${ipAddress}</td>
+              <td>${rxMB}</td>
+              <td>${txMB}</td>
+            `;
+            networkTableBody.appendChild(row);
+          });
+        } else {
+          // 添加占位行表示数据加载失败
+          const row = document.createElement('tr');
+          row.innerHTML = '<td colspan="4" style="text-align: center; color: #6b7280;">无法加载网络信息</td>';
+          networkTableBody.appendChild(row);
+        }
+        
+        return { rx: totalRx / 5, tx: totalTx / 5 }; // 估算每秒速率（基于5秒刷新间隔）
+      } catch (error) {
+        console.error('更新网络信息失败:', error);
+        const networkTableBody = document.getElementById('network-table-body');
+        networkTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #6b7280;">无法加载网络信息</td></tr>';
+        return { rx: 0, tx: 0 };
+      }
+    }
+
+    // 获取并更新系统信息
+    async function updateSystemInfo() {
+      try {
+        const response = await fetch('/api/system');
+        const data = await response.json();
+        
+        // 更新系统信息
+        document.getElementById('os-name').textContent = data.os ? `${data.os.distro || '未知'} ${data.os.release || ''}` : '未知';
+        
+        // 格式化运行时间
+        const uptimeSeconds = data.uptime || 0;
+        const days = Math.floor(uptimeSeconds / (24 * 60 * 60));
+        const hours = Math.floor((uptimeSeconds % (24 * 60 * 60)) / (60 * 60));
+        const minutes = Math.floor((uptimeSeconds % (60 * 60)) / 60);
+        let uptimeString = '';
+        if (days > 0) uptimeString += `${days}天 `;
+        if (hours > 0) uptimeString += `${hours}小时 `;
+        if (minutes > 0) uptimeString += `${minutes}分钟`;
+        document.getElementById('uptime').textContent = uptimeString || '未知';
+      } catch (error) {
+        console.error('更新系统信息失败:', error);
+      }
+    }
+
+    // 主更新函数
+    async function updateAllInfo() {
+      const cpuUsage = await updateCPUInfo();
+      const memoryUsage = await updateMemoryInfo();
+      await updateDiskInfo();
+      const networkStats = await updateNetworkInfo();
+      await updateSystemInfo();
+      
+      // 更新图表
+      updateCharts(cpuUsage, memoryUsage, networkStats.rx, networkStats.tx);
+    }
+
+    // 初始化
+    window.onload = async () => {
+      // 先初始化图表，显示已保存的历史数据
+      initializeCharts();
+      
+      // 更新系统信息
+      await updateAllInfo();
+      
+      // 设置定时刷新
+      setInterval(updateAllInfo, 5000);
+    };
+  </script>
+</body>
+</html>
