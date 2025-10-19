@@ -133,7 +133,8 @@ sudo firewall-cmd --reload
 
 ## 作者
 
-FnemX
+CLUMM
+QQ：785971038
 
 ## 项目地址
 
