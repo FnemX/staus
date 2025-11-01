@@ -1,7 +1,7 @@
-# Linux系统状态监控网站
+# 系统状态监控网站
 
 ## 项目概述
-这是一个基于Node.js开发的Linux系统状态实时监控网站，能够展示CPU、内存、磁盘和网络等系统资源的使用情况。系统采用前后端分离架构，后端通过systeminformation库获取系统数据，前端使用纯HTML/CSS/JavaScript实现数据可视化展示。项目主要适用于服务器的系统状态监控。
+这是一个基于Node.js开发的跨平台系统状态实时监控网站，支持Linux和Windows系统，能够展示CPU、内存、磁盘和网络等系统资源的使用情况。系统采用前后端分离架构，后端通过systeminformation库获取系统数据，前端使用纯HTML/CSS/JavaScript实现数据可视化展示。项目适用于各种服务器的系统状态监控。
 
 ## 功能特性
 
@@ -48,6 +48,31 @@
    ```
 
 4. **访问网站**
+   打开浏览器，访问 `http://localhost:3001`
+
+### Windows系统部署
+
+Windows系统上的部署步骤与Linux类似：
+
+1. **安装Node.js**
+   - 访问 [Node.js官网](https://nodejs.org/) 下载Windows安装包
+   - 运行安装程序，按照向导完成安装
+
+2. **下载项目文件**
+   - 从GitHub下载项目zip文件并解压
+   - 或者使用Git Bash克隆仓库
+
+3. **安装依赖**
+   ```cmd
+   npm install
+   ```
+
+4. **启动服务器**
+   ```cmd
+   npm start
+   ```
+
+5. **访问网站**
    打开浏览器，访问 `http://localhost:3001`
 
 ## 在Linux系统上部署
@@ -133,8 +158,7 @@ sudo firewall-cmd --reload
 
 ## 作者
 
-CLUMM
-QQ：785971038
+FnemX
 
 ## 项目地址
 
